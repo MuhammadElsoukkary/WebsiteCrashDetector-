@@ -2,8 +2,8 @@ name: Website Monitor
 
 on:
   schedule:
-    - cron: '*/5 * * * *'  # Every 5 minutes
-  workflow_dispatch:  # Allow manual trigger
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
 
 jobs:
   monitor:
@@ -49,21 +49,3 @@ jobs:
           name: crash-screenshots
           path: crash_detector/screenshots/*.png
           if-no-files-found: ignore
-```
-
-## Key Changes:
-
-✅ Added `working-directory: crash_detector` to run commands in the inner folder  
-✅ Updated paths: `crash_detector/requirements.txt`  
-✅ Updated screenshot path: `crash_detector/screenshots/*.png`
-
-## Final File Locations:
-```
-crash_detector/                           # Root repo
-├── .github/
-│   └── workflows/
-│       └── monitor.yml                   # ← Put workflow here
-└── crash_detector/                       # Inner folder
-    ├── monitor.py                        # ← Updated Python script
-    ├── requirements.txt                  # ← Requirements file
-    └── screenshots/                      # ← Created automatically
