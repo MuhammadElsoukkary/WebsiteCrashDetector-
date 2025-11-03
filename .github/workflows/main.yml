@@ -1,0 +1,69 @@
+name: Website Monitor
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'  # Every 5 minutes
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install Chrome
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y chromium-browser chromium-chromedriver
+      
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r crash_detector/requirements.txt
+      
+      - name: Run monitor
+        working-directory: crash_detector
+        env:
+          TARGET_URL: ${{ secrets.TARGET_URL }}
+          REQUEST_TIMEOUT: ${{ secrets.REQUEST_TIMEOUT }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          SENDER: ${{ secrets.SENDER }}
+          RECIPIENTS: ${{ secrets.RECIPIENTS }}
+          SCREENSHOT_DIR: screenshots
+        run: python monitor.py
+      
+      - name: Upload screenshots (if any)
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: crash-screenshots
+          path: crash_detector/screenshots/*.png
+          if-no-files-found: ignore
+```
+
+## Key Changes:
+
+✅ Added `working-directory: crash_detector` to run commands in the inner folder  
+✅ Updated paths: `crash_detector/requirements.txt`  
+✅ Updated screenshot path: `crash_detector/screenshots/*.png`
+
+## Final File Locations:
+```
+crash_detector/                           # Root repo
+├── .github/
+│   └── workflows/
+│       └── monitor.yml                   # ← Put workflow here
+└── crash_detector/                       # Inner folder
+    ├── monitor.py                        # ← Updated Python script
+    ├── requirements.txt                  # ← Requirements file
+    └── screenshots/                      # ← Created automatically
