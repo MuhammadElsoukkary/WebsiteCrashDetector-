@@ -26,10 +26,10 @@ jobs:
       - name: Install Python dependencies
         run: |
           pip install --upgrade pip
-          pip install -r crash_detector/requirements.txt
+          pip install -r crash_detector/crash_detector/requirements.txt
       
       - name: Run monitor
-        working-directory: crash_detector
+        working-directory: crash_detector/crash_detector
         env:
           TARGET_URL: ${{ secrets.TARGET_URL }}
           REQUEST_TIMEOUT: ${{ secrets.REQUEST_TIMEOUT }}
@@ -47,5 +47,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: crash-screenshots
-          path: crash_detector/screenshots/*.png
+          path: crash_detector/crash_detector/screenshots/*.png
           if-no-files-found: ignore
