@@ -5,8 +5,6 @@ import requests, smtplib
 from email.message import EmailMessage
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
 
 # Load config from environment variables
 URL = os.getenv("TARGET_URL", "https://www.alsalaam.ca/")
@@ -30,8 +28,25 @@ def check_site(url):
         r = requests.get(url, timeout=TIMEOUT)
         if r.status_code != 200:
             return False, f"HTTP {r.status_code}"
-        if any(x in r.text.lower() for x in ["error", "exception", "unavailable", "not found"]):
-            return False, "Page content suggests error"
+        
+        # Only flag if error messages are visible to users
+        error_indicators = [
+            "error establishing a database connection",
+            "500 internal server error",
+            "503 service unavailable",
+            "404 not found",
+            "fatal error",
+            "database error",
+            "connection timed out",
+            "service temporarily unavailable",
+            "internal server error"
+        ]
+        
+        page_text_lower = r.text.lower()
+        for indicator in error_indicators:
+            if indicator in page_text_lower:
+                return False, f"Page content suggests error: {indicator}"
+        
         return True, "OK"
     except Exception as e:
         return False, f"Request failed: {e}"
@@ -45,18 +60,24 @@ def take_screenshot(url):
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-gpu")
+    options.binary_location = "/usr/bin/chromium-browser"
     
-    service = Service(ChromeDriverManager().install())
-    driver = webdriver.Chrome(service=service, options=options)
     try:
+        driver = webdriver.Chrome(options=options)
         driver.set_page_load_timeout(20)
         driver.get(url)
         driver.implicitly_wait(3)
         driver.save_screenshot(str(path))
         logging.info(f"Saved screenshot: {path}")
         return path
+    except Exception as e:
+        logging.error(f"Screenshot failed: {e}")
+        return None
     finally:
-        driver.quit()
+        try:
+            driver.quit()
+        except:
+            pass
 
 def send_alert(reason, screenshot):
     ts = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
