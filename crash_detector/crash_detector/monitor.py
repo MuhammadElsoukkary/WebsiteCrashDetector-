@@ -5,6 +5,8 @@ import requests, smtplib
 from email.message import EmailMessage
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
 
 # Load config from environment variables
 URL = os.getenv("TARGET_URL", "https://www.alsalaam.ca/")
@@ -60,10 +62,18 @@ def take_screenshot(url):
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-gpu")
-    options.binary_location = "/usr/bin/chromium-browser"
     
+    driver = None
     try:
-        driver = webdriver.Chrome(options=options)
+        # Try using webdriver-manager first (handles driver updates automatically)
+        try:
+            service = Service(ChromeDriverManager().install())
+            driver = webdriver.Chrome(service=service, options=options)
+        except Exception as e:
+            # Fall back to system chromedriver (pre-installed in GitHub Actions)
+            logging.info(f"webdriver-manager failed ({e}), using system chromedriver")
+            driver = webdriver.Chrome(options=options)
+        
         driver.set_page_load_timeout(20)
         driver.get(url)
         driver.implicitly_wait(3)
@@ -74,10 +84,11 @@ def take_screenshot(url):
         logging.error(f"Screenshot failed: {e}")
         return None
     finally:
-        try:
-            driver.quit()
-        except:
-            pass
+        if driver:
+            try:
+                driver.quit()
+            except:
+                pass
 
 def send_alert(reason, screenshot):
     ts = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
